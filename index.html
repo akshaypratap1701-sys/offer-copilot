@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Offer Copilot: an AI copilot that helps merchants plan, fund, run and measure checkout offers.">
+<title>Offer Copilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+html,body{margin:0}body{min-height:100vh}[hidden]{display:none!important}
+/* Layout: merchant dashboard shell. Fixed left nav + top bar + working canvas. Blue accent on cool neutrals. */
+:root{
+  --bg:#F1F4F9; --surface:#FFFFFF; --surface2:#F6F8FC; --ink:#0D1B33; --muted:#5B6B84; --line:#DEE4EE;
+  --accent:#2563EB; --accent-ink:#FFFFFF; --accent-soft:#E6EEFE; --navy:#0B1D3A;
+  --good:#0A7F4F; --good-soft:#DDF3E8; --warn:#A85A00; --warn-soft:#FDEFD9; --bad:#BF2F2A; --bad-soft:#FBE3E1;
+  --bank:#7A3E9D; --bank-soft:#F1E7F8; --chart2:#A3B0C3;
+  --ui:"Plus Jakarta Sans",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0A1220; --surface:#111C2F; --surface2:#16233A; --ink:#E7EDF6; --muted:#97A6BD; --line:#24344F;
+  --accent:#5B93FF; --accent-ink:#06101F; --accent-soft:#17305C; --navy:#050C18;
+  --good:#3CC48A; --good-soft:#0F3527; --warn:#F0A44A; --warn-soft:#3A2810; --bad:#FF7A72; --bad-soft:#3E1A19;
+  --bank:#C99AE6; --bank-soft:#2E1A3B; --chart2:#5A6B86; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0A1220; --surface:#111C2F; --surface2:#16233A; --ink:#E7EDF6; --muted:#97A6BD; --line:#24344F;
+  --accent:#5B93FF; --accent-ink:#06101F; --accent-soft:#17305C; --navy:#050C18;
+  --good:#3CC48A; --good-soft:#0F3527; --warn:#F0A44A; --warn-soft:#3A2810; --bad:#FF7A72; --bad-soft:#3E1A19;
+  --bank:#C99AE6; --bank-soft:#2E1A3B; --chart2:#5A6B86; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--ui);font-size:14px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+h1,h2,h3{text-wrap:balance;margin:0}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+/* shell */
+.app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100%}
+.side{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;padding:14px 10px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px;letter-spacing:-.3px;padding:4px 10px 14px}
+.brand i{width:26px;height:26px;border-radius:7px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-style:normal;font-size:13px}
+.acct{border:1px solid var(--line);border-radius:10px;padding:9px 10px;display:flex;gap:9px;align-items:center;margin-bottom:14px}
+.acct span.av{width:30px;height:30px;border-radius:8px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:800;font-size:11px}
+.acct b{display:block;font-size:12px}.acct small{color:var(--muted);font-size:11px}
+.navlbl{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 12px 6px}
+.nav{display:grid;gap:2px}
+.nav button{display:flex;align-items:center;gap:10px;border:0;background:none;text-align:left;padding:9px 12px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted)}
+.nav button:hover{background:var(--surface2);color:var(--ink)}
+.nav button.on{background:var(--accent-soft);color:var(--accent)}
+.nav .ic{width:18px;text-align:center}
+.nav .new{margin-left:auto;font-size:10px;background:var(--accent);color:var(--accent-ink);padding:2px 6px;border-radius:99px}
+.sidefoot{margin-top:auto;font-size:11px;color:var(--muted);padding:10px 12px;display:grid;gap:6px}
+.sidefoot button{border:0;background:none;padding:0;text-align:left;color:var(--accent);font-weight:600;font-size:11px}
+.topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 24px;position:sticky;top:env(safe-area-inset-top,0px);z-index:4}
+.crumb{font-size:13px;color:var(--muted)}.crumb b{color:var(--ink)}
+.search{margin-left:auto;border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:7px 12px;font-size:12px;color:var(--muted);width:min(300px,30vw)}
+.tag{font-size:11px;font-weight:700;border:1px dashed var(--line);color:var(--muted);border-radius:6px;padding:4px 8px;white-space:nowrap}
+.me{width:32px;height:32px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700}
+.menu{display:none;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px}
+.wrap{padding:22px 24px 60px;max-width:1280px;width:100%;margin:0 auto;display:grid;gap:16px;align-content:start}
+/* common */
+.head{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;flex-wrap:wrap}
+.head h1{font-size:24px;letter-spacing:-.5px;line-height:1.2}
+.head p{margin:4px 0 0;color:var(--muted);font-size:13px;max-width:680px}
+.back{border:0;background:none;color:var(--accent);font-weight:600;font-size:12px;padding:0;margin-bottom:6px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;min-width:0}
+.card h2{font-size:15px;letter-spacing:-.2px}
+.sub{color:var(--muted);font-size:12px;margin:3px 0 0}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 14px;font-weight:600;font-size:13px;display:inline-flex;gap:8px;align-items:center;justify-content:center;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.bankb{background:var(--bank);border-color:var(--bank);color:#fff}
+.btn.bad{color:var(--bad);border-color:var(--bad)}
+.btn.sm{padding:6px 10px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sp{flex:1}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.g2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--surface2);color:var(--muted);border:1px solid var(--line);white-space:nowrap}
+.pill.good{background:var(--good-soft);color:var(--good);border-color:transparent}
+.pill.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.pill.bad{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.pill.ai{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.pill.blue{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.pill.bank{background:var(--bank-soft);color:var(--bank);border-color:transparent}
+.big{font-size:32px;font-weight:800;letter-spacing:-1px;line-height:1.05}
+.mid{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.kpi{padding:14px}
+.tabs{display:flex;gap:22px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:0;background:none;padding:0 0 10px;font-weight:600;font-size:13px;color:var(--muted);position:relative;white-space:nowrap}
+.tabs button.on{color:var(--accent)}
+.tabs button.on:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent)}
+.tabs .cnt{font-size:10px;background:var(--surface2);border:1px solid var(--line);border-radius:99px;padding:1px 6px;margin-left:4px}
+.tblwrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:720px}
+th{text-align:left;font-size:11px;color:var(--muted);font-weight:700;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--surface2);text-transform:uppercase;letter-spacing:.04em}
+td{padding:12px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+tr.click{cursor:pointer}tr.click:hover td{background:var(--surface2)}
+/* AI strip */
+.aistrip{background:var(--navy);color:#fff;border-radius:12px;padding:16px 18px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.aistrip .spark{width:38px;height:38px;border-radius:10px;background:var(--accent);display:grid;place-items:center;font-weight:800}
+.aistrip p{margin:2px 0 0;opacity:.8;font-size:13px}
+.aistrip .btn{margin-left:auto}
+/* opportunity */
+.opp{display:grid;gap:12px;border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--surface);align-content:start}
+.opp h3{font-size:15px;line-height:1.35}
+.why{display:grid;gap:6px;font-size:12px;color:var(--muted)}
+.why div{display:grid;grid-template-columns:14px 1fr;gap:6px}
+.why div:before{content:"›";color:var(--accent);font-weight:800}
+details summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--accent)}
+.linkbtn{font-size:12px;color:var(--muted);background:none;border:0;text-decoration:underline;padding:0}
+/* plans */
+.opt{border:1.5px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:12px;background:var(--surface);align-content:start}
+.opt.pick{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.terms{font-size:15px;font-weight:700}
+.kv{display:grid;grid-template-columns:1fr auto;gap:6px 10px;font-size:12px}
+.kv span{color:var(--muted)}.kv b{text-align:right}
+.meter{height:8px;border-radius:9px;background:var(--surface2);overflow:hidden;border:1px solid var(--line)}
+.meter i{display:block;height:100%;background:var(--warn)}
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.vs>div{border-radius:10px;padding:14px;background:var(--surface2);border:1px solid var(--line)}
+.vs .ai{background:var(--accent-soft);border-color:transparent}
+/* editor */
+.form{display:grid;gap:16px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:grid;gap:5px;min-width:0}
+.field.full{grid-column:1/-1}
+.field label{font-size:12px;font-weight:700}
+.field small{font-size:11px;color:var(--muted)}
+.input{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 10px;width:100%;min-width:0}
+.segc{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-wrap:wrap}
+.segc button{border:0;background:var(--surface);padding:8px 12px;font-size:12px;font-weight:600}
+.segc button.on{background:var(--accent);color:var(--accent-ink)}
+.fund{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.fund button{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:11px;text-align:left;display:grid;gap:3px}
+.fund button b{font-size:13px}.fund button small{font-size:11px;color:var(--muted)}
+.fund button.on{border-color:var(--accent);background:var(--accent-soft)}
+.fund button.on.bk{border-color:var(--bank);background:var(--bank-soft)}
+.slider{display:grid;gap:3px}
+.slider .t2{display:flex;justify-content:space-between;font-size:12px;font-weight:700}
+.slider output{font-family:var(--mono);color:var(--accent)}
+.slider small{font-size:11px;color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.sect{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:12px}
+.sect h3{font-size:13px}
+.toggle{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
+.toggle input{width:17px;height:17px;accent-color:var(--accent);margin-top:2px}
+.toggle b{font-size:13px;display:block}.toggle small{color:var(--muted);font-size:12px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--accent);color:var(--accent);background:var(--surface);border-radius:99px;padding:6px 12px;font-size:12px;font-weight:700}
+.chip:hover{background:var(--accent-soft)}
+.impact{position:sticky;top:74px;display:grid;gap:12px;align-content:start}
+.hero{background:var(--navy);color:#fff;border-radius:12px;padding:16px}
+.hero .lbl{color:#ffffffaa}
+.split{display:flex;height:12px;border-radius:99px;overflow:hidden;background:var(--surface2);margin:8px 0 6px}
+.split i{display:block;height:100%}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.legend span:before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;background:var(--c)}
+.mini{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mini>div{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:11px}
+.note{display:grid;grid-template-columns:20px 1fr;gap:8px;font-size:13px;padding:10px 12px;border-radius:10px;background:var(--surface2);border:1px solid var(--line)}
+.note.warn{background:var(--warn-soft);border-color:transparent}
+.note.bad{background:var(--bad-soft);border-color:transparent}
+.note.good{background:var(--good-soft);border-color:transparent}
+.note.bank{background:var(--bank-soft);border-color:transparent}
+.note i{font-style:normal;font-weight:800}
+.note .act{margin-top:6px}
+.footbar{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:12px 24px calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;flex-wrap:wrap;align-items:center;z-index:3;margin:0 -24px -60px}
+svg text{fill:var(--muted);font-size:11px;font-family:var(--ui)}
+/* bank tracker */
+.track{display:grid;gap:0}
+.tstep{display:grid;grid-template-columns:28px 1fr;gap:12px;position:relative;padding-bottom:16px}
+.tstep:not(:last-child):after{content:"";position:absolute;left:13px;top:28px;bottom:0;width:2px;background:var(--line)}
+.tstep .d{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);background:var(--surface);display:grid;place-items:center;font-size:12px;font-weight:800;color:var(--muted);z-index:1}
+.tstep.done .d{background:var(--good);border-color:var(--good);color:#fff}
+.tstep.now .d{background:var(--bank);border-color:var(--bank);color:#fff}
+.tstep.fail .d{background:var(--bad);border-color:var(--bad);color:#fff}
+.tstep b{font-size:13px;display:block}.tstep small{font-size:12px;color:var(--muted)}
+.demo{border:1.5px dashed var(--line);border-radius:12px;padding:14px;background:var(--surface2)}
+.demo .lbl{margin-bottom:8px}
+.counter{border:2px solid var(--bank);border-radius:12px;padding:16px;background:var(--bank-soft);display:grid;gap:10px}
+/* live */
+.status{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;font-weight:700;font-size:13px}
+.status.live{background:var(--good-soft);color:var(--good)}
+.status.paused{background:var(--warn-soft);color:var(--warn)}
+.status.sched{background:var(--accent-soft);color:var(--accent)}
+.dot{width:9px;height:9px;border-radius:50%;background:currentColor}
+.nudge{border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:8px;background:var(--surface)}
+.nudge.dn{opacity:.6}
+.nudge h3{font-size:14px}.nudge p{margin:0;font-size:13px;color:var(--muted)}
+.bars{display:grid;gap:10px}
+.barrow{display:grid;grid-template-columns:120px 1fr 80px;gap:10px;align-items:center;font-size:12px}
+.bt{height:14px;border-radius:4px;background:var(--surface2);overflow:hidden}
+.bt i{display:block;height:100%;background:var(--accent)}
+.bt i.g{background:var(--chart2)}
+.learn{display:grid;gap:10px}
+.learn div{display:grid;grid-template-columns:auto 1fr;gap:10px;font-size:13px;align-items:start}
+/* modal */
+.modalbg{position:fixed;inset:0;background:#06101fb3;display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.modal{background:var(--surface);border-radius:14px;width:min(620px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:22px;display:grid;gap:14px}
+.modal h2{font-size:18px}
+.opts{display:grid;gap:8px}
+.opts label{display:grid;grid-template-columns:auto 1fr;gap:10px;border:1px solid var(--line);border-radius:10px;padding:11px;cursor:pointer;font-size:13px}
+.opts label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opts input{accent-color:var(--accent)}
+.opts small{color:var(--muted);display:block;font-size:12px}
+.toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translate(-50%,30px);opacity:0;background:var(--navy);color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;transition:.2s;pointer-events:none;z-index:30;max-width:calc(100% - 32px)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.empty{text-align:center;color:var(--muted);padding:30px}
+@media (max-width:1050px){.g3,.g2{grid-template-columns:1fr}.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.impact{position:static}}
+@media (max-width:820px){.app{grid-template-columns:1fr}.side{position:fixed;left:0;top:0;bottom:0;z-index:15;width:250px;transform:translateX(-105%);transition:.2s}.side.open{transform:none;box-shadow:0 0 0 100vmax #06101f88}.menu{display:block}.search{display:none}.topbar{padding:0 16px}.wrap{padding:18px 16px 60px}.footbar{margin:0 -16px -60px;padding-left:16px;padding-right:16px}}
+@media (max-width:560px){.fgrid,.fund,.vs,.mini{grid-template-columns:1fr}.big{font-size:27px}.head h1{font-size:21px}.barrow{grid-template-columns:80px 1fr 64px}.tag{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="app">
+ <aside class="side" id="side">
+  <div class="brand"><i>₹</i>Payments</div>
+  <div class="acct"><span class="av">NH</span><span><b>Nivara Home</b><small>Home linen · D2C</small></span></div>
+  <div class="navlbl">Accept payments</div>
+  <nav class="nav" id="nav"></nav>
+  <div class="sidefoot"><span>Concept prototype · sample data</span><button onclick="resetDemo()">Reset demo data</button></div>
+ </aside>
+ <div style="min-width:0;display:flex;flex-direction:column">
+  <header class="topbar"><button class="menu" onclick="$('#side').classList.toggle('open')" aria-label="Menu">☰</button><div class="crumb" id="crumb"></div><div class="search">Search payments, offers, customers</div><span class="tag">Sample data</span><span class="me">AS</span></header>
+  <div class="wrap" id="main"></div>
+ </div>
+</div>
+<div id="modal"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ---------- data ---------- */
+const SEG={
+ festive:{issuer:'Kotak Mahindra Bank',bshort:'Kotak',card:'Credit cards',name:'Kotak credit card buyers',perDay:9.1,aov:2250,elastic:4,days:7,start:'2026-11-01',conf:'Medium',vol:'₹12.8L',
+  title:'Kotak cardholders are your biggest Diwali spenders, and 1 in 3 leave at checkout',
+  signals:['Kotak cards are 28% of your card volume (₹12.8L in 12 months)','Last Diwali: 64 Kotak orders at a ₹2,250 average basket','31% of Kotak checkouts in festive weeks ended unpaid','Kotak buyers redeemed 2 of your past card offers'],
+  presets:{careful:{type:'pct',value:4,cap:100,min:3000,maxUses:40},balanced:{type:'pct',value:5,cap:150,min:2500,maxUses:60},bold:{type:'pct',value:10,cap:300,min:2000,maxUses:120}}},
+ basket:{issuer:'All cards and UPI',bshort:'',card:'All methods',name:'All buyers',perDay:22,aov:1750,elastic:3.2,days:10,start:'2026-10-20',conf:'High',vol:'₹38.4L',
+  title:'Carts keep stalling just under ₹2,000',
+  signals:['41% of orders land between ₹1,500 and ₹1,999','Average basket is ₹1,750, a bedsheet set is ₹2,199','Orders with 2+ items get refunded 22% less','No basket-size offer has run in 6 months'],
+  presets:{careful:{type:'flat',value:100,cap:100,min:2000,maxUses:120},balanced:{type:'flat',value:150,cap:150,min:2200,maxUses:150},bold:{type:'pct',value:10,cap:250,min:1500,maxUses:300}}},
+ winback:{issuer:'All cards and UPI',bshort:'',card:'Saved cards',name:'Lapsed repeat buyers',perDay:1.2,aov:2100,elastic:9,days:14,start:'2026-10-22',conf:'Low',vol:'₹4.5L',
+  title:'212 repeat buyers have gone quiet for 90+ days',
+  signals:['212 customers bought 2+ times, nothing since July','They used to order every 47 days','58% paid with saved cards at your checkout','Small group, so the estimate is wide'],
+  presets:{careful:{type:'flat',value:150,cap:150,min:1500,maxUses:40},balanced:{type:'pct',value:10,cap:250,min:2000,maxUses:60},bold:{type:'flat',value:400,cap:400,min:1500,maxUses:80}}}
+};
+const PLAN={careful:'Careful pilot',balanced:'Balanced',bold:'Big push'};
+const ISSUERS=['Kotak Mahindra Bank','ICICI Bank','HDFC Bank','Axis Bank','State Bank of India','All cards and UPI'];
+const MARGIN=.35;
+function seed(){return {view:'home',tab:'suggest',opp:null,detail:null,draft:null,dismissed:{},seq:5,
+ offers:[
+  {id:'o1',name:'Welcome offer · all cards',opp:'basket',issuer:'All cards and UPI',card:'All methods',p:{type:'flat',value:100,cap:100,min:1500,days:30,maxUses:400},start:'2026-10-01',fund:{mode:'me',bank:0},guard:g0(9000),status:'Live',req:null,live:{day:12,paused:false,nudges:{}}},
+  {id:'o2',name:'Summer sale · ICICI cards',opp:'festive',issuer:'ICICI Bank',card:'Credit cards',p:{type:'pct',value:5,cap:150,min:2000,days:10,maxUses:90},start:'2026-05-10',fund:{mode:'shared',bank:40},guard:g0(8000),status:'Ended',req:{stage:4,result:'approved',fallback:'wait',hist:[['Sent to ICICI Bank','2 May'],['Approved: bank pays 40%','6 May']]},live:{day:10,paused:false,nudges:{}}},
+  {id:'o3',name:'Monsoon · SBI debit cards',opp:'basket',issuer:'State Bank of India',card:'Debit cards',p:{type:'flat',value:150,cap:150,min:2000,days:7,maxUses:60},start:'2026-12-05',fund:{mode:'me',bank:0},guard:g0(9500),status:'Draft',req:null,live:{day:0,paused:false,nudges:{}}}
+ ]}}
+function g0(b){return {budget:b,auto:'ask',pauseBudget:true,cardLimit:true,refund:true,holdout:true}}
+let S;try{S=JSON.parse(localStorage.getItem('offer-copilot-v2'))}catch(e){}
+if(!S||!S.offers)S=seed();
+function save(){try{localStorage.setItem('offer-copilot-v2',JSON.stringify(S))}catch(e){}}
+function resetDemo(){S=seed();save();nav('home');toast('Demo data reset')}
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const R=n=>'₹'+Math.round(n).toLocaleString('en-IN');
+const K=n=>{n=Math.round(n);const a=Math.abs(n);return (n<0?'-':'')+(a>=100000?'₹'+(a/100000).toFixed(2)+'L':a>=1000?'₹'+(a/1000).toFixed(1)+'k':'₹'+a)};
+const clone=o=>JSON.parse(JSON.stringify(o));
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),3000)}
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function dt(s,add=0){const d=new Date(s+'T00:00:00');d.setDate(d.getDate()+add);return d.getDate()+' '+MON[d.getMonth()]}
+function range(o){return dt(o.start)+' to '+dt(o.start,o.p.days-1)}
+function terms(p){return (p.type==='flat'?R(p.value)+' off':p.value+'% off up to '+R(p.cap))+' above '+R(p.min)}
+function myShare(o){return o.fund.mode==='me'?1:o.fund.mode==='bank'?0:1-o.fund.bank/100}
+function bankShort(o){return o.issuer==='All cards and UPI'?'the bank':o.issuer.split(' ')[0]}
+const isBank=o=>o.issuer!=='All cards and UPI';
+
+/* Model: buyers who'd come anyway, buyers the offer creates, buyers who climb to the minimum, fatigue. */
+function sim(p,seg,share=1){
+  const D=p.days, base=seg.perDay*D, avgQ=Math.max(p.min,seg.aov)*1.08;
+  const per=p.type==='flat'?Math.min(p.value,p.cap):Math.min(p.cap,avgQ*p.value/100), eff=per/avgQ;
+  const q=1/(1+Math.exp((p.min-seg.aov)/(seg.aov*.2)));
+  const fat=D<=7?1:Math.max(.55,1-(D-7)*.035);
+  const nw=base*Math.max(0,eff-.015)*seg.elastic*fat;
+  const climb=p.min>seg.aov?Math.max(0,1-(p.min-seg.aov)/(seg.aov*.6)):0;
+  const up=base*(1-q)*.22*climb*Math.min(1,eff/.04);
+  const any=base*q,tot=any+nw+up,red=Math.min(p.maxUses,tot),sc=tot?red/tot:0;
+  const total=red*per,cost=total*share,bankCost=total-cost;
+  const gain=(nw*avgQ*MARGIN+up*Math.max(0,p.min-seg.aov*.85)*MARGIN)*sc;
+  return {D,base,per,eff,any:any*sc,nw:nw*sc,up:up*sc,red,total,cost,bankCost,profit:gain-cost,lo:gain*.7-cost,hi:gain*1.3-cost,
+   leak:red?any*sc/red:0,inc:(nw+up)*sc,roi:cost?(gain-cost)/cost:0,capDay:tot>p.maxUses?Math.max(1,Math.round(p.maxUses/(tot/D))):null,avgQ};
+}
+const simO=o=>sim(o.p,SEG[o.opp],myShare(o));
+function presetP(k,o){return Object.assign({days:SEG[k].days},SEG[k].presets[o])}
+function aiPick(k){let b=null,bv=-1e12;for(const o of ['careful','balanced','bold']){const r=sim(presetP(k,o),SEG[k]);const v=r.profit+r.lo*.3;if(v>bv){bv=v;b=o}}return b}
+function risk(r){return r.profit<0?['bad','Loses money']:r.leak>.6?['warn','High leakage']:r.lo<0?['warn','Could go negative']:['good','Low risk']}
+const STAT={Live:'good',Scheduled:'blue','Pending bank':'bank','Bank countered':'bank',Draft:'',Ended:'',Paused:'warn','Bank declined':'bad',Cancelled:''};
+
+/* ---------- router ---------- */
+const NAV=[['home','⌂','Home'],['tx','⇄','Transactions'],['settle','▤','Settlements'],['offers','%','Offers'],['cust','◎','Customers'],['links','⌁','Payment Links'],['reports','▥','Reports']];
+function nav(v,arg){S.view=v;if(v==='offers'&&arg)S.tab=arg;if(v==='plans')S.opp=arg;if(v==='offer')S.detail=arg;save();render();window.scrollTo({top:0});$('#side').classList.remove('open')}
+function render(){
+  const sec=['plans','editor','offer'].includes(S.view)?'offers':S.view;
+  const pend=S.offers.filter(o=>o.status==='Pending bank'||o.status==='Bank countered').length;
+  $('#nav').innerHTML=NAV.map(n=>`<button class="${sec===n[0]?'on':''}" onclick="nav('${n[0]}')"><span class="ic">${n[1]}</span>${n[2]}${n[0]==='offers'?`<span class="new">${pend?pend+' pending':'AI'}</span>`:''}</button>`).join('');
+  const cr={home:'Home',tx:'Transactions',settle:'Settlements',offers:'Offers',cust:'Customers',links:'Payment Links',reports:'Reports',plans:'Offers / Suggestion',editor:'Offers / '+(S.draft&&S.draft.existing?'Edit offer':'Create offer'),offer:'Offers / Offer details'}[S.view];
+  $('#crumb').innerHTML='<b>'+cr+'</b>';
+  ({home,tx,offers,plans,editor,offer})[S.view]?({home,tx,offers,plans,editor,offer})[S.view]():other();
+}
+
+/* ---------- home ---------- */
+function home(){const live=S.offers.filter(o=>o.status==='Live').length;
+ $('#main').innerHTML=`
+ <div class="head"><div><h1>Good afternoon, Akshay</h1><p>Here's how Nivara Home is doing today.</p></div></div>
+ <div class="g4">
+  <div class="card kpi"><div class="lbl">Collected today</div><div class="mid num">₹48,210</div><div class="sub">31 payments · 94.2% success</div></div>
+  <div class="card kpi"><div class="lbl">Next settlement</div><div class="mid num">₹1.86L</div><div class="sub">Tomorrow, 11 AM</div></div>
+  <div class="card kpi"><div class="lbl">Live offers</div><div class="mid num">${live}</div><div class="sub">${S.offers.filter(o=>o.status==='Pending bank').length} waiting on a bank</div></div>
+  <div class="card kpi"><div class="lbl">Card share of sales</div><div class="mid num">46%</div><div class="sub">UPI 49%, wallets 5%</div></div>
+ </div>
+ <div class="aistrip"><span class="spark">AI</span><div><b>Offer Copilot found ${Object.keys(SEG).filter(k=>!S.dismissed[k]).length} ways to grow sales this month</b><p>Biggest one: Kotak cardholders before Diwali, worth up to ${K(sim(presetP('festive','balanced'),SEG.festive).hi)} in extra profit.</p></div><button class="btn pri" onclick="nav('offers','suggest')">See suggestions</button></div>
+ <div class="card"><div class="row"><h2>Payments by issuing bank</h2><span class="sp"></span><span class="sub">Last 12 months · cards only</span></div>
+  <div class="bars" style="margin-top:12px">${[['Kotak Mahindra',28,'₹12.8L'],['ICICI Bank',23,'₹10.6L'],['HDFC Bank',19,'₹8.7L'],['Axis Bank',16,'₹7.3L'],['Others',14,'₹6.4L']].map(b=>`<div class="barrow"><span>${b[0]}</span><div class="bt"><i style="width:${b[1]/30*100}%"></i></div><span class="num">${b[1]}% · ${b[2]}</span></div>`).join('')}</div></div>`}
+function tx(){const rows=[['pay_PmK29x','₹2,499','Kotak credit','Captured','2:41 PM'],['pay_PmK1Qa','₹1,180','UPI · GPay','Captured','2:33 PM'],['pay_PmJz7r','₹3,150','HDFC credit','Captured','2:20 PM'],['pay_PmJy2c','₹1,899','ICICI debit','Failed','2:12 PM'],['pay_PmJx9d','₹2,250','Kotak credit','Captured','1:58 PM'],['pay_PmJw4e','₹999','UPI · PhonePe','Refunded','1:40 PM']];
+ $('#main').innerHTML=`<div class="head"><div><h1>Transactions</h1><p>Payments received today</p></div></div><div class="card" style="padding:0"><div class="tblwrap"><table><thead><tr><th>Payment ID</th><th>Amount</th><th>Method</th><th>Status</th><th>Time</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="num">${r[0]}</td><td class="num"><b>${r[1]}</b></td><td>${r[2]}</td><td><span class="pill ${r[3]==='Captured'?'good':r[3]==='Failed'?'bad':''}">${r[3]}</span></td><td>${r[4]}</td></tr>`).join('')}</tbody></table></div></div>`}
+function other(){$('#main').innerHTML=`<div class="head"><div><h1>${NAV.find(n=>n[0]===S.view)[2]}</h1></div></div><div class="card empty">Nothing to show in this demo account. <br><button class="btn pri" style="margin-top:12px" onclick="nav('offers')">Go to Offers</button></div>`}
+
+/* ---------- offers hub ---------- */
+function offers(){
+ const keys=Object.keys(SEG).filter(k=>!S.dismissed[k]);
+ const reqs=S.offers.filter(o=>o.req);
+ const ended=S.offers.filter(o=>o.status==='Ended');
+ const T=[['suggest','Suggestions',keys.length],['all','All offers',S.offers.length],['bank','Bank requests',reqs.length],['results','Results',ended.length]];
+ let body='';
+ if(S.tab==='suggest'){body=`
+  <div class="g3">${keys.map(k=>{const s=SEG[k],r=sim(presetP(k,aiPick(k)),s);return `
+   <article class="opp">
+    <div class="row"><span class="pill ${s.conf==='High'?'good':s.conf==='Medium'?'blue':'warn'}">${s.conf} confidence</span><span class="pill">${dt(s.start)} onwards</span></div>
+    <h3>${s.title}</h3>
+    <div><div class="lbl">Extra profit if you act</div><div class="big num">${K(Math.max(0,r.lo))} to ${K(r.hi)}</div><div class="sub">After discount cost, at your 35% margin</div></div>
+    <details><summary>Why am I seeing this?</summary><div class="why" style="margin-top:8px">${s.signals.map(x=>`<div>${x}</div>`).join('')}</div></details>
+    <div class="row"><button class="btn pri" onclick="nav('plans','${k}')">See 3 plans</button><button class="linkbtn" onclick="dismiss('${k}')">Not relevant</button></div>
+    <div class="chips" id="rs-${k}" hidden></div>
+   </article>`}).join('')||'<div class="card empty">No open suggestions. New ones appear as your payment data changes.</div>'}</div>
+  <div class="card"><div class="row"><div><h2>Why the copilot doesn't just discount your top bank</h2><p class="sub">Same Diwali week, Kotak cards. A flat rule pays everyone. The copilot pays mostly for orders that wouldn't have happened.</p></div></div>
+   <div class="vs" style="margin-top:12px">${(()=>{const s=SEG.festive,rule=sim({type:'pct',value:10,cap:9999,min:0,days:7,maxUses:9999},s),pk=presetP('festive',aiPick('festive')),ai=sim(pk,s);return `
+    <div><div class="lbl">Rule: 10% off every Kotak order</div><div class="mid num" style="color:var(--bad)">${K(rule.profit)}</div><div class="sub">${Math.round(rule.leak*100)}% of the discount goes to orders already coming</div></div>
+    <div class="ai"><div class="lbl">Copilot: ${terms(pk)}</div><div class="mid num" style="color:var(--good)">+${K(ai.profit)}</div><div class="sub">Rewards bigger baskets, capped spend, measured against a holdout</div></div>`})()}</div></div>`}
+ if(S.tab==='all')body=`<div class="card" style="padding:0"><div class="tblwrap"><table><thead><tr><th>Offer</th><th>Eligible</th><th>Discount</th><th>Dates</th><th>Who pays</th><th>Status</th></tr></thead><tbody>
+  ${S.offers.map(o=>`<tr class="click" onclick="nav('offer','${o.id}')"><td><b>${o.name}</b><div class="sub num">${o.id.toUpperCase()}</div></td><td>${o.issuer}<div class="sub">${o.card}</div></td><td>${terms(o.p)}</td><td>${range(o)}</td><td>${fundLabel(o)}</td><td><span class="pill ${STAT[o.status]}">${o.status}</span></td></tr>`).join('')}</tbody></table></div></div>`;
+ if(S.tab==='bank')body=reqs.length?`<div class="card" style="padding:0"><div class="tblwrap"><table><thead><tr><th>Offer</th><th>Bank</th><th>Ask</th><th>Last update</th><th>Status</th></tr></thead><tbody>
+  ${reqs.map(o=>`<tr class="click" onclick="nav('offer','${o.id}')"><td><b>${o.name}</b></td><td>${o.issuer}</td><td>Bank pays ${o.fund.mode==='bank'?'100':o.fund.bank}%</td><td>${o.req.hist[o.req.hist.length-1][0]}<div class="sub">${o.req.hist[o.req.hist.length-1][1]}</div></td><td><span class="pill ${STAT[o.status]||'good'}">${o.req.result==='approved'?'Approved':o.status}</span></td></tr>`).join('')}</tbody></table></div></div>`:`<div class="card empty">No bank requests yet. Choose "Shared with bank" when creating an offer to send one.</div>`;
+ if(S.tab==='results')body=`<div class="g3">${ended.map(o=>{const x=result(o);return `<article class="card" style="display:grid;gap:10px;cursor:pointer" onclick="nav('offer','${o.id}')"><div class="row"><b>${o.name}</b></div><div class="sub">${range(o)}</div><div><div class="lbl">Real extra profit</div><div class="big num" style="color:${x.prof>0?'var(--good)':'var(--bad)'}">${x.prof>0?'+':''}${K(x.prof)}</div></div><div class="sub">+${x.lift}% conversion vs holdout</div><button class="btn sm">Open results</button></article>`}).join('')||'<div class="card empty">No finished offers yet.</div>'}</div>`;
+ $('#main').innerHTML=`
+ <div class="head"><div><h1>Offers</h1><p>Plan, run and measure discounts on your checkout and payment links.</p></div><button class="btn pri" onclick="newBlank()">+ Create offer</button></div>
+ <div class="tabs">${T.map(t=>`<button class="${S.tab===t[0]?'on':''}" onclick="nav('offers','${t[0]}')">${t[1]}<span class="cnt">${t[2]}</span></button>`).join('')}</div>${body}`;
+}
+function fundLabel(o){return o.fund.mode==='me'?'You':o.fund.mode==='bank'?'<span class="pill bank">Bank</span>':`You ${100-o.fund.bank}% · <span style="color:var(--bank);font-weight:700">${bankShort(o)} ${o.fund.bank}%</span>`}
+function dismiss(k){const b=$('#rs-'+k);b.hidden=false;b.innerHTML=['Margins too thin','Low stock','Wrong timing','Not my customers'].map(x=>`<button class="chip" onclick="S.dismissed['${k}']='${x}';save();offers();toast('Hidden. Similar ideas will rank lower.')">${x}</button>`).join('')}
+
+/* ---------- plans ---------- */
+function plans(){const k=S.opp,s=SEG[k],pick=aiPick(k);
+ const why={careful:'Least spend and least downside. Fewer orders reach the higher minimum, so upside is smaller.',balanced:'Minimum sits just above your usual basket, so the discount mostly goes to people who add an item.',bold:'Most orders and buzz, but a big share of the discount goes to people who would buy anyway.'};
+ $('#main').innerHTML=`
+ <div class="head"><div><button class="back" onclick="nav('offers','suggest')">← Suggestions</button><h1>${s.title}</h1><p>${s.name} · from ${dt(s.start)} · ${s.conf.toLowerCase()} confidence</p></div></div>
+ <div class="g3">${['careful','balanced','bold'].map(o=>{const p=presetP(k,o),r=sim(p,s),rk=risk(r);return `
+  <article class="opt ${o===pick?'pick':''}">
+   <div class="row"><b>${PLAN[o]}</b>${o===pick?'<span class="pill ai">Recommended</span>':''}<span class="sp"></span><span class="pill ${rk[0]}">${rk[1]}</span></div>
+   <div class="terms">${terms(p)}</div>
+   <div><div class="lbl">Extra profit</div><div class="big num" style="color:${r.profit<0?'var(--bad)':'var(--ink)'}">${r.profit<0?'':'+'}${K(r.profit)}</div><div class="sub num">Likely ${K(r.lo)} to ${K(r.hi)}</div></div>
+   <div class="kv"><span>Discount you pay</span><b class="num">${K(r.cost)}</b><span>New orders created</span><b class="num">${Math.round(r.inc)}</b><span>Orders coming anyway</span><b class="num">${Math.round(r.any)}</b><span>Redemption cap</span><b class="num">${p.maxUses}</b></div>
+   <div><div class="row" style="font-size:12px"><span>Discount spent on sure buyers</span><span class="sp"></span><b class="num">${Math.round(r.leak*100)}%</b></div><div class="meter"><i style="width:${Math.round(r.leak*100)}%"></i></div></div>
+   <p class="sub" style="margin:0">${why[o]}</p>
+   <button class="btn ${o===pick?'pri':''}" onclick="newFrom('${k}','${o}')">Use this plan</button>
+  </article>`}).join('')}</div>
+ ${isBank({issuer:s.issuer})?`<div class="note bank"><i>B</i><div><b>Want ${s.bshort} to share the cost?</b> Pick any plan, then choose "Shared with bank" in the next screen. We'll send ${s.bshort} a request through Razorpay and the offer only runs on terms they approve.</div></div>`:''}`}
+
+/* ---------- editor ---------- */
+function newFrom(k,o){const s=SEG[k];S.draft={id:'o'+(++S.seq),name:(k==='festive'?'Diwali':k==='basket'?'Bigger basket':'Come back')+' · '+(s.bshort?s.bshort+' cards':'all buyers'),opp:k,issuer:s.issuer,card:s.card,p:presetP(k,o),start:s.start,fund:{mode:'me',bank:50},guard:g0(0),status:'Draft',req:null,live:{day:0,paused:false,nudges:{}},plan:o,log:[]};
+ S.draft.guard.budget=autoBudget(S.draft);nav('editor')}
+function newBlank(){newFrom('basket','balanced');S.draft.name='New offer';S.draft.plan=null;render()}
+function editExisting(id){const o=S.offers.find(x=>x.id===id);S.draft=Object.assign(clone(o),{existing:true,log:[]});nav('editor')}
+function autoBudget(o){const r=simO(o);return Math.max(1000,Math.ceil(r.cost*1.15/500)*500)}
+function sl(id,label,val,min,max,step,f,help){return `<div class="slider"><div class="t2"><label for="${id}">${label}</label><output id="o-${id}">${f(val)}</output></div><input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${val}" oninput="slide('${id}',+this.value)"><small>${help}</small></div>`}
+const FMT={value:v=>S.draft.p.type==='pct'?v+'%':R(v),cap:R,min:R,days:v=>v+' days',maxUses:v=>v};
+function editor(){const o=S.draft,p=o.p,s=SEG[o.opp];
+ $('#main').innerHTML=`
+ <div class="head"><div><button class="back" onclick="${o.existing?`nav('offer','${o.id}')`:o.plan?`nav('plans','${o.opp}')`:`nav('offers','all')`}">← Back</button><h1>${o.existing?'Edit offer':'Create offer'}</h1>${o.plan?`<p>Started from the ${PLAN[o.plan].toLowerCase()} plan. Change anything, the impact updates on the right.</p>`:''}</div></div>
+ <div class="g2">
+  <div class="card form">
+   <div class="fgrid">
+    <div class="field full"><label for="f-name">Offer name</label><input id="f-name" class="input" value="${o.name}" oninput="S.draft.name=this.value"></div>
+    <div class="field"><label for="f-iss">Eligible bank</label><select id="f-iss" class="input" onchange="setIssuer(this.value)">${ISSUERS.map(i=>`<option ${i===o.issuer?'selected':''}>${i}</option>`).join('')}</select></div>
+    <div class="field"><label for="f-card">Payment method</label><select id="f-card" class="input" onchange="S.draft.card=this.value">${['Credit cards','Debit cards','Credit and debit cards','All methods','Saved cards'].map(i=>`<option ${i===o.card?'selected':''}>${i}</option>`).join('')}</select></div>
+    <div class="field"><label for="f-start">Starts on</label><input id="f-start" type="date" class="input" value="${o.start}" onchange="S.draft.start=this.value;upd()"></div>
+    <div class="field"><label>Discount type</label><div class="segc"><button class="${p.type==='pct'?'on':''}" onclick="setType('pct')">% off</button><button class="${p.type==='flat'?'on':''}" onclick="setType('flat')">Flat ₹ off</button></div></div>
+   </div>
+   <div id="sliders" style="display:grid;gap:14px"></div>
+   <div class="sect"><h3>Who pays for the discount?</h3>
+    <div class="fund">
+     <button class="${o.fund.mode==='me'?'on':''}" onclick="setFund('me')"><b>Paid by me</b><small>Goes live on your say. No bank approval needed.</small></button>
+     <button class="bk ${o.fund.mode==='shared'?'on':''}" onclick="setFund('shared')" ${isBank(o)?'':'disabled style="opacity:.5"'}><b>Shared with bank</b><small>${isBank(o)?bankShort(o)+' must approve first':'Pick a specific bank'}</small></button>
+     <button class="bk ${o.fund.mode==='bank'?'on':''}" onclick="setFund('bank')" ${isBank(o)?'':'disabled style="opacity:.5"'}><b>Paid by bank</b><small>Rarely approved for smaller stores</small></button>
+    </div>
+    ${o.fund.mode==='shared'?sl('bank','Bank pays',o.fund.bank,20,80,5,v=>v+'%','What you will ask '+bankShort(o)+' to cover. 30 to 50% is a common ask.'):''}
+   </div>
+   <div class="sect"><h3>Limits and safety</h3>
+    ${sl('budget','Hard budget (your share)',o.guard.budget,500,Math.max(5000,Math.ceil(simO(o).cost*3/1000)*1000),500,R,'Offer switches off when your spend reaches this')}
+    <div class="field"><label for="f-auto">What can the copilot do on its own?</label><select id="f-auto" class="input" onchange="S.draft.guard.auto=this.value">${[['ask','Suggest only, I approve every change'],['adjust','Adjust minimum or cap by up to 20%, within budget'],['pause','Only pause the offer if something looks wrong']].map(a=>`<option value="${a[0]}" ${o.guard.auto===a[0]?'selected':''}>${a[1]}</option>`).join('')}</select></div>
+    ${[['pauseBudget','Pause at 90% of budget','You choose to top up or stop'],['cardLimit','One discount per card per day','Stops repeat use and split orders'],['refund','Pause if refunds on offer orders pass 5%','Catches buy, discount, return abuse'],['holdout','Keep 10% of eligible buyers as a holdout','They don\'t see the offer, so you can measure real extra sales']].map(t=>`<label class="toggle"><input type="checkbox" ${o.guard[t[0]]?'checked':''} onchange="S.draft.guard['${t[0]}']=this.checked;upd()"><span><b>${t[1]}</b><small>${t[2]}</small></span></label>`).join('')}
+   </div>
+  </div>
+  <div class="impact" id="impact"></div>
+ </div>
+ <div class="card"><h2>Where your profit peaks</h2><p class="sub">Extra profit at each discount level, with everything else as you've set it.</p><div id="curve" style="overflow-x:auto;margin-top:8px"></div></div>
+ <div class="footbar"><span class="sub" id="fsum" style="margin:0"></span><span class="sp"></span><button class="btn" onclick="saveDraft()">Save draft</button><span id="primary"></span></div>`;
+ sliders();upd();}
+function sliders(){const p=S.draft.p,s=SEG[S.draft.opp];
+ $('#sliders').innerHTML=(p.type==='pct'?sl('value','Discount',p.value,1,20,1,v=>v+'%','Taken off the order value')+sl('cap','Max discount per order',p.cap,50,500,10,R,'Keeps big orders from costing you a lot'):sl('value','Flat discount',p.value,50,500,10,R,'Same amount off every qualifying order'))
+ +sl('min','Minimum order',p.min,0,4000,100,R,'Your usual basket for this group is '+R(s.aov))+sl('days','Runs for',p.days,2,30,1,v=>v+' days','')+sl('maxUses','Total redemptions cap',p.maxUses,10,400,10,v=>v,'')}
+let slT;
+function slide(id,v){const o=S.draft;const b=simO(o);
+ if(id==='bank')o.fund.bank=v;else if(id==='budget')o.guard.budget=v;else{o.p[id]=v;if(o.p.type==='flat')o.p.cap=o.p.value}
+ $('#o-'+id).textContent=(id==='bank'?v+'%':id==='budget'?R(v):FMT[id](v));upd();
+ clearTimeout(slT);if(id!=='budget')slT=setTimeout(()=>logDiff(({value:'Discount',cap:'Cap',min:'Minimum',days:'Duration',maxUses:'Cap on redemptions',bank:'Bank share'})[id]+' '+(id==='bank'?v+'%':FMT[id](v)),b,simO(o)),500)}
+function logDiff(w,b,a){const d=a.profit-b.profit;S.draft.log.unshift(`${w}: profit ${d>=0?'+':''}${K(d)}, your spend ${a.cost-b.cost>=0?'+':''}${K(a.cost-b.cost)}`);S.draft.log=S.draft.log.slice(0,5);const l=$('#log');if(l)l.innerHTML=S.draft.log.map(x=>`<div>${x}</div>`).join('')}
+function setType(t){const o=S.draft;if(t==='flat'){o.p.value=Math.min(500,Math.max(50,Math.round(o.p.cap/10)*10));o.p.cap=o.p.value}else{o.p.value=5;o.p.cap=Math.max(o.p.cap,100)}o.p.type=t;editor()}
+function setFund(m){S.draft.fund.mode=m;if(m==='shared'&&!S.draft.fund.bank)S.draft.fund.bank=50;S.draft.guard.budget=autoBudget(S.draft);editor()}
+function setIssuer(v){S.draft.issuer=v;if(!isBank(S.draft))S.draft.fund.mode='me';editor()}
+function tweak(k){const o=S.draft,p=o.p,aov=SEG[o.opp].aov,b=simO(o);let m='';
+ if(k==='basket'){p.min=Math.round(aov*1.15/100)*100;m='Minimum set just above usual basket'}
+ if(k==='margin'){p.min=Math.max(p.min,Math.round(aov*1.2/100)*100);if(p.type==='pct'){p.value=Math.max(3,p.value-1);p.cap=Math.min(p.cap,150)}else{p.value=Math.min(p.value,120);p.cap=p.value}m='Smaller discount, higher minimum'}
+ if(k==='more'){p.maxUses=Math.min(400,Math.round(p.maxUses*1.5/10)*10);m='Raised the redemption cap'}
+ if(k==='short'){p.days=7;m='Shortened to 7 days'}
+ if(k==='bank'){o.fund.mode='shared';o.fund.bank=40;m='Asking '+bankShort(o)+' to pay 40%'}
+ o.guard.budget=autoBudget(o);editor();logDiff(m,b,simO(o));toast(m)}
+function upd(){const o=S.draft,p=o.p,s=SEG[o.opp],r=simO(o);
+ const tot=r.total||1;
+ $('#impact').innerHTML=`
+  <div class="hero"><div class="lbl">Your extra profit</div><div class="big num">${r.profit<0?'':'+'}${K(r.profit)}</div><div class="num" style="font-size:12px;opacity:.8">Likely ${K(r.lo)} to ${K(r.hi)} · ${range(o)}</div></div>
+  <div class="card" style="padding:14px"><div class="row"><b style="font-size:13px">Discount cost ${K(r.total)}</b><span class="sp"></span><span class="sub" style="margin:0">${Math.round(r.red)} orders × ${R(r.per)}</span></div>
+   <div class="split"><i style="width:${r.cost/tot*100}%;background:var(--accent)"></i><i style="width:${r.bankCost/tot*100}%;background:var(--bank)"></i></div>
+   <div class="legend"><span style="--c:var(--accent)">You ${K(r.cost)}</span>${r.bankCost>0?`<span style="--c:var(--bank)">${bankShort(o)} ${K(r.bankCost)} · needs approval</span>`:''}</div></div>
+  <div class="mini"><div><div class="lbl">New orders</div><div class="mid num">${Math.round(r.inc)}</div><div class="sub">${Math.round(r.nw)} new + ${Math.round(r.up)} bigger baskets</div></div>
+   <div><div class="lbl">Spent on sure buyers</div><div class="mid num" style="color:${r.leak>.6?'var(--warn)':'var(--ink)'}">${Math.round(r.leak*100)}%</div><div class="sub">${Math.round(r.any)} orders coming anyway</div></div></div>
+  <div class="card" style="padding:14px;display:grid;gap:8px"><b style="font-size:13px">Copilot notes</b><div id="notes" style="display:grid;gap:8px"></div>
+   <div class="chips"><button class="chip" onclick="tweak('basket')">Push bigger baskets</button><button class="chip" onclick="tweak('margin')">Protect margin</button>${isBank(o)&&o.fund.mode==='me'?'<button class="chip" onclick="tweak(\'bank\')">Ask bank to share</button>':''}</div>
+   <div id="log" class="sub" style="display:grid;gap:4px">${(o.log||[]).map(x=>`<div>${x}</div>`).join('')}</div></div>`;
+ const n=[];
+ if(r.profit<0)n.push(['bad','!',`You'd lose about ${K(-r.profit)}. Most of this discount pays for orders you'd get anyway.`]);
+ if(r.leak>.6&&r.profit>=0)n.push(['warn','!',`${Math.round(r.leak*100)}% of the discount goes to sure buyers. A minimum just above ${R(s.aov)} fixes most of it.`]);
+ if(r.eff>.09)n.push(['warn','%',`A ${Math.round(r.eff*100)}% effective discount is steep at 35% margin. Your past offers above 9% didn't pay back.`]);
+ if(r.capDay&&r.capDay<p.days)n.push(['warn','⏱',`Redemptions will likely run out on day ${r.capDay}. Later shoppers will see no offer.`]);
+ if(p.days>14)n.push(['warn','↘','Response usually fades after the first week. A shorter run keeps urgency.']);
+ if(o.fund.mode!=='me'){const lead=Math.round((new Date(o.start)-new Date('2026-10-13'))/864e5);n.push(['bank','B',`${bankShort(o)} has to approve before this goes live. Banks usually reply in 5 to 7 working days, you have ${lead} days.${o.fund.mode==='bank'?' Fully bank-paid asks are approved far less often than shared ones.':''}`])}
+ if(!o.guard.holdout)n.push(['warn','?','Without a holdout you won\'t know which sales the offer really created.']);
+ if(!n.length||(r.profit>0&&r.leak<.55))n.push(['good','✓',`Healthy. Each ₹1 you spend should return about ₹${(1+r.roi).toFixed(1)} in margin.`]);
+ $('#notes').innerHTML=n.map(x=>`<div class="note ${x[0]}"><i>${x[1]}</i><div>${x[2]}</div></div>`).join('');
+ $('#fsum').innerHTML=`<b>${terms(p)}</b> · ${o.issuer}`;
+ $('#primary').innerHTML=o.fund.mode==='me'?`<button class="btn pri" onclick="openSchedule()">Review and schedule</button>`:`<button class="btn bankb" onclick="openBank()">Send to ${bankShort(o)} for approval</button>`;
+ curve();}
+function curve(){const o=S.draft,p=o.p,s=SEG[o.opp],sh=myShare(o);const xs=p.type==='pct'?[...Array(20)].map((_,i)=>i+1):[...Array(19)].map((_,i)=>50+i*25);
+ const ys=xs.map(x=>sim(Object.assign({},p,p.type==='pct'?{value:x}:{value:x,cap:x}),s,sh).profit);
+ const W=640,H=200,L=60,B=28,T=18,Rr=14,mn=Math.min(0,...ys),mx=Math.max(1,...ys);
+ const X=i=>L+(W-L-Rr)*i/(xs.length-1),Y=v=>T+(H-T-B)*(1-(v-mn)/(mx-mn));
+ const cur=xs.reduce((bi,x,i)=>Math.abs(x-p.value)<Math.abs(xs[bi]-p.value)?i:bi,0),best=ys.indexOf(Math.max(...ys));
+ const path=ys.map((v,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)).join(' ');
+ $('#curve').innerHTML=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:420px;height:auto" role="img" aria-label="Profit by discount level">
+  ${[mn,(mn+mx)/2,mx].map(t=>`<line x1="${L}" x2="${W-Rr}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--line)"/><text x="${L-8}" y="${Y(t)+4}" text-anchor="end">${K(t)}</text>`).join('')}
+  ${mn<0?`<line x1="${L}" x2="${W-Rr}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--muted)" stroke-dasharray="4 4"/>`:''}
+  <path d="${path} L${X(xs.length-1)} ${Y(mn)} L${L} ${Y(mn)} Z" fill="var(--accent)" fill-opacity=".12"/><path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+  ${xs.map((x,i)=>i%(p.type==='pct'?2:3)===0||i===xs.length-1?`<text x="${X(i)}" y="${H-8}" text-anchor="middle">${p.type==='pct'?x+'%':'₹'+x}</text>`:'').join('')}
+  <circle cx="${X(best)}" cy="${Y(ys[best])}" r="5" fill="var(--good)"/><text x="${X(best)}" y="${Y(ys[best])-9}" text-anchor="middle" style="fill:var(--good);font-weight:700">Peak</text>
+  <circle cx="${X(cur)}" cy="${Y(ys[cur])}" r="7" fill="var(--surface)" stroke="var(--accent)" stroke-width="3"/></svg>`}
+function commit(status){const o=S.draft;o.status=status;delete o.existing;delete o.log;const i=S.offers.findIndex(x=>x.id===o.id);if(i>=0)S.offers[i]=o;else S.offers.unshift(o);S.draft=null;save();return o}
+function saveDraft(){const o=commit('Draft');nav('offers','all');toast('Saved as draft. Customers can\'t see it.')}
+
+/* ---------- modals ---------- */
+function modal(h){$('#modal').innerHTML=`<div class="modalbg" onclick="if(event.target===this)closeM()"><div class="modal" role="dialog" aria-modal="true">${h}</div></div>`}
+function closeM(){$('#modal').innerHTML=''}
+function openSchedule(){const o=S.draft,r=simO(o);modal(`<h2>Schedule this offer?</h2>
+ <div class="kv" style="font-size:13px"><span>Offer</span><b>${terms(o.p)}</b><span>Eligible</span><b>${o.issuer} · ${o.card}</b><span>Dates</span><b>${range(o)}</b><span>Who pays</span><b>You, 100%</b><span>Hard budget</span><b class="num">${R(o.guard.budget)}</b><span>Expected extra profit</span><b class="num">+${K(r.profit)}</b><span>Holdout</span><b>${o.guard.holdout?'10% of eligible buyers':'Off'}</b></div>
+ <div class="checkout" style="border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface2)"><div class="lbl">Customer sees at checkout</div><div style="border:1.5px dashed var(--accent);border-radius:8px;padding:10px;margin-top:8px;font-size:13px;background:var(--surface)"><b style="color:var(--accent)">${o.p.type==='pct'?o.p.value+'% off':R(o.p.value)+' off'}${isBank(o)?' with '+o.issuer.replace(' Bank','')+' '+o.card.toLowerCase():''}</b><br>On orders above ${R(o.p.min)}${o.p.type==='pct'?', up to '+R(o.p.cap):''}. Valid ${range(o)}.</div></div>
+ <div class="row" style="justify-content:flex-end"><button class="btn" onclick="closeM()">Go back</button><button class="btn pri" onclick="closeM();const o=commit('Scheduled');nav('offer',o.id);toast('Scheduled for ${dt(o.start)}')">Schedule offer</button></div>`)}
+function openBank(){const o=S.draft,r=simO(o),bs=bankShort(o),s=SEG[o.opp];const by=dt(o.start,-3);
+ modal(`<div><span class="pill bank">Bank approval</span><h2 style="margin-top:8px">Send to ${o.issuer}</h2><p class="sub">Razorpay's partnerships team checks the request and passes it to ${bs}. The offer only goes live on terms ${bs} approves.</p></div>
+ <div class="card" style="padding:14px"><div class="lbl" style="margin-bottom:8px">What ${bs} will see</div><div class="kv" style="font-size:13px">
+  <span>Merchant</span><b>Nivara Home · home linen</b><span>${bs} card volume, 12 months</span><b class="num">${s.vol}</b><span>Offer</span><b>${terms(o.p)}</b><span>Cards</span><b>${o.card}</b><span>Dates</span><b>${range(o)}</b>
+  <span>${bs} pays</span><b class="num" style="color:var(--bank)">${o.fund.mode==='bank'?100:o.fund.bank}% · about ${K(r.bankCost)}</b><span>You pay</span><b class="num">${K(r.cost)}</b><span>Expected redemptions</span><b class="num">${Math.round(r.red)} (capped at ${o.p.maxUses})</b><span>Reply needed by</span><b>${by}</b></div></div>
+ <div><div class="lbl" style="margin-bottom:8px">If ${bs} doesn't approve by ${by}</div><div class="opts">
+  <label><input type="radio" name="fb" value="wait" checked><span><b>Don't run the offer</b><small>Nothing goes live without the bank's yes</small></span></label>
+  <label><input type="radio" name="fb" value="self"><span><b>Run it fully paid by me</b><small>Goes live on ${dt(o.start)} at your cost of ${K(sim(o.p,s,1).cost)}. Switches to shared if ${bs} approves later.</small></span></label>
+ </div></div>
+ <div class="field"><label for="bmsg">Note to the bank (optional)</label><textarea id="bmsg" class="input" rows="2">Diwali is our biggest week. Kotak card buyers are 28% of our card sales.</textarea></div>
+ <label class="toggle"><input type="checkbox" id="bok"><span><b>I understand this is a request, not an approval</b><small>Terms may change if ${bs} sends a counter offer. You'll review it before anything goes live.</small></span></label>
+ <div class="row" style="justify-content:flex-end"><button class="btn" onclick="closeM()">Cancel</button><button class="btn bankb" onclick="sendBank()">Send request</button></div>`)}
+function sendBank(){if(!$('#bok').checked){toast('Please tick the confirmation first');return}
+ const fb=document.querySelector('input[name=fb]:checked').value,o=S.draft;
+ o.req={stage:2,result:null,fallback:fb,msg:$('#bmsg').value,hist:[['Sent to Razorpay partnerships','13 Oct, 4:10 PM'],['Checks passed: eligible category, volume above threshold','13 Oct, 4:12 PM'],['Shared with '+o.issuer,'13 Oct, 4:30 PM']],counter:null};
+ closeM();commit('Pending bank');nav('offer',o.id);toast('Request sent to '+o.issuer)}
+
+/* ---------- offer detail ---------- */
+function offer(){const o=S.offers.find(x=>x.id===S.detail);if(!o){nav('offers','all');return}
+ const r=simO(o),s=SEG[o.opp];
+ let main='';
+ if(o.status==='Pending bank'||o.status==='Bank countered'||o.status==='Bank declined'||(o.req&&o.status==='Scheduled'))main=bankView(o);
+ if(o.status==='Live'||o.status==='Paused')main+=liveView(o);
+ if(o.status==='Scheduled')main+=`<div class="status sched"><span class="dot"></span>Scheduled · starts ${dt(o.start)}</div><div class="row"><button class="btn pri" onclick="startNow('${o.id}')">Jump to day 4 of the offer</button><button class="btn" onclick="editExisting('${o.id}')">Edit</button><button class="btn bad" onclick="setStatus('${o.id}','Cancelled')">Cancel offer</button></div>`;
+ if(o.status==='Draft')main+=`<div class="card"><div class="row"><div><h2>Draft</h2><p class="sub">Customers can't see this yet.</p></div><span class="sp"></span><button class="btn pri" onclick="editExisting('${o.id}')">Continue editing</button></div></div>`;
+ if(o.status==='Ended')main+=resultView(o);
+ if(o.status==='Cancelled')main+=`<div class="card empty">This offer was cancelled. <br><button class="btn" style="margin-top:10px" onclick="editExisting('${o.id}')">Reuse as a new draft</button></div>`;
+ $('#main').innerHTML=`
+ <div class="head"><div><button class="back" onclick="nav('offers','all')">← All offers</button><div class="row"><h1>${o.name}</h1><span class="pill ${STAT[o.status]}">${o.status}</span></div><p>${terms(o.p)} · ${o.issuer} ${o.card.toLowerCase()} · ${range(o)} · paid by ${fundLabel(o).replace(/<[^>]+>/g,'')}</p></div></div>
+ ${main}`}
+function setStatus(id,st){const o=S.offers.find(x=>x.id===id);o.status=st;save();offer();toast('Offer '+st.toLowerCase())}
+function bankView(o){const q=o.req,bs=bankShort(o),r=simO(o);
+ const steps=[['Request sent','Through Razorpay partnerships'],['Razorpay checks','Category, volume and terms'],['With '+o.issuer,'Bank reviews cost and fit'],['Decision','Approve, counter or decline']];
+ const done=q.result?4:q.stage;
+ const tr=steps.map((x,i)=>{let c=i<done?'done':i===done?'now':'';if(i===3&&q.result==='declined')c='fail';return `<div class="tstep ${c}"><span class="d">${c==='done'?'✓':c==='fail'?'×':i+1}</span><div><b>${x[0]}</b><small>${x[1]}</small></div></div>`}).join('');
+ let action='';
+ if(o.status==='Pending bank')action=`<div class="demo"><div class="lbl">Demo control · simulate ${bs}'s reply</div><div class="row"><button class="btn sm" onclick="bankReply('${o.id}','approve')">Bank approves</button><button class="btn sm" onclick="bankReply('${o.id}','counter')">Bank sends counter offer</button><button class="btn sm" onclick="bankReply('${o.id}','decline')">Bank declines</button></div></div>`;
+ if(o.status==='Bank countered'){const c=q.counter,np=Object.assign({},o.p,{min:c.min,cap:c.cap}),nr=sim(np,SEG[o.opp],1-c.bank/100);
+  action=`<div class="counter"><div class="row"><span class="pill bank">Counter offer</span><b>${o.issuer} will co-fund, on different terms</b></div>
+  <div class="vs"><div><div class="lbl">You asked</div><b>${terms(o.p)}</b><div class="sub">${bs} pays ${o.fund.mode==='bank'?100:o.fund.bank}%</div><div class="mid num" style="margin-top:6px">+${K(r.profit)}</div><div class="sub">your extra profit</div></div>
+   <div class="ai"><div class="lbl">${bs} offers</div><b>${terms(np)}</b><div class="sub">${bs} pays ${c.bank}%</div><div class="mid num" style="margin-top:6px;color:${nr.profit>=r.profit?'var(--good)':'var(--ink)'}">+${K(nr.profit)}</div><div class="sub">your extra profit</div></div></div>
+  <div class="note"><i>AI</i><div>${nr.profit>=r.profit*.85?`Worth accepting. The higher minimum cuts discount spent on sure buyers, so you keep most of the profit while ${bs} shares the cost.`:`This counter leaves you with less. You could accept, or run your original plan fully paid by you for +${K(sim(o.p,SEG[o.opp],1).profit)}.`}</div></div>
+  <div class="row"><button class="btn bankb" onclick="acceptCounter('${o.id}')">Accept ${bs}'s terms</button><button class="btn" onclick="rejectCounter('${o.id}')">Decline counter</button></div></div>`}
+ if(o.status==='Bank declined'){const self=sim(o.p,SEG[o.opp],1);action=`<div class="note bad"><i>×</i><div><b>${o.issuer} declined.</b> Reason given: festive budget already committed to larger merchants.</div></div>
+  <div class="note"><i>AI</i><div>Paid fully by you, this offer still makes about <b>+${K(self.profit)}</b> (your cost ${K(self.cost)}). Want to run it that way, or try another bank?
+  <div class="act row"><button class="btn sm pri" onclick="runSelf('${o.id}')">Run it paid by me</button><button class="btn sm" onclick="editExisting('${o.id}')">Change bank or terms</button></div></div></div>`}
+ return `<div class="g2"><div class="card"><div class="row"><h2>Bank request</h2><span class="sp"></span><span class="pill bank">${bs} asked to pay ${o.fund.mode==='bank'?100:o.fund.bank}%</span></div>
+  <div class="track" style="margin-top:14px">${tr}</div>
+  <div class="sub">If ${bs} doesn't approve in time: <b>${q.fallback==='self'?'run it fully paid by me':'don\'t run the offer'}</b></div></div>
+  <div style="display:grid;gap:12px;align-content:start;min-width:0">${action}
+  <div class="card" style="padding:14px"><b style="font-size:13px">Activity</b><div style="display:grid;gap:6px;margin-top:8px">${q.hist.slice().reverse().map(h=>`<div class="row" style="font-size:12px"><span>${h[0]}</span><span class="sp"></span><span class="sub" style="margin:0">${h[1]}</span></div>`).join('')}</div></div></div></div>`}
+function bankReply(id,a){const o=S.offers.find(x=>x.id===id),bs=bankShort(o);
+ if(a==='approve'){o.req.result='approved';o.req.hist.push([bs+' approved: pays '+(o.fund.mode==='bank'?100:o.fund.bank)+'%','16 Oct, 11:05 AM']);o.status='Scheduled';toast(bs+' approved. Offer scheduled.')}
+ if(a==='counter'){o.req.stage=3;o.req.counter={bank:30,min:Math.max(o.p.min,3000),cap:Math.min(o.p.cap,120)};o.req.hist.push([bs+' sent a counter offer','16 Oct, 11:05 AM']);o.status='Bank countered';toast(bs+' sent a counter offer')}
+ if(a==='decline'){o.req.result='declined';o.req.hist.push([bs+' declined','16 Oct, 11:05 AM']);if(o.req.fallback==='self'){o.fund.mode='me';o.status='Scheduled';o.req.hist.push(['Switched to paid by you, as you chose','16 Oct, 11:05 AM']);toast('Declined. Running it paid by you, as you chose.')}else{o.status='Bank declined';toast(bs+' declined')}}
+ save();offer()}
+function acceptCounter(id){const o=S.offers.find(x=>x.id===id),c=o.req.counter;o.p.min=c.min;o.p.cap=c.cap;if(o.p.type==='flat')o.p.value=Math.min(o.p.value,c.cap);o.fund={mode:'shared',bank:c.bank};o.req.result='approved';o.req.hist.push(['You accepted '+bankShort(o)+'\'s terms','16 Oct, 11:20 AM']);o.status='Scheduled';o.guard.budget=autoBudget(o);save();offer();toast('Accepted. Offer scheduled on the approved terms.')}
+function rejectCounter(id){const o=S.offers.find(x=>x.id===id);o.req.result='declined';o.req.hist.push(['You declined the counter','16 Oct, 11:20 AM']);o.status='Bank declined';save();offer()}
+function runSelf(id){const o=S.offers.find(x=>x.id===id);o.fund={mode:'me',bank:0};o.req.hist.push(['Switched to paid by you','16 Oct, 11:30 AM']);o.status='Scheduled';o.guard.budget=autoBudget(o);save();offer();toast('Scheduled, paid by you')}
+function startNow(id){const o=S.offers.find(x=>x.id===id);o.status='Live';o.live.day=Math.min(4,o.p.days);save();offer()}
+
+/* live */
+function liveView(o){const r=simO(o),f=r.red/r.D,mult=[1.5,2.1,1.9,2.2],day=o.live.day,bs=bankShort(o);
+ const act=[...Array(day)].map((_,i)=>Math.round(f*mult[i%4])),done=act.reduce((a,b)=>a+b,0),spent=Math.min(o.guard.budget,done*r.per*myShare(o)),nm=Math.round(o.p.min*1.2/100)*100,pl=Math.round(f*day);
+ const N=[{id:'hot',lvl:'warn',tag:'Budget',t:`Running ${(done/Math.max(1,pl)).toFixed(1)}x faster than planned`,d:`${done} redemptions vs ${pl} expected. 64% are orders that were already above ${R(o.p.min)}. Raising the minimum to ${R(nm)} keeps the offer for bigger baskets and makes the budget last.`,a:'Raise minimum to '+R(nm)},
+  {id:'card',lvl:'bad',tag:'Risk',t:'One card used 5 times in 40 minutes',d:'Card ending 4417 placed 5 orders of ₹2,510 to the same pincode. Your one-per-day rule held 4 of the discounts. Block this card from offers?',a:'Block card'},
+  {id:'axis',lvl:'blue',tag:'Idea',t:'Axis cardholders are browsing more',d:'Axis checkouts are up 38% this week at a ₹2,900 average basket. Want a draft for a small Axis test next week?',a:'Draft Axis test'}];
+ const shown=Math.min(r.D,7),mx=Math.max(...act,f)*1.15;
+ return `<div class="status ${o.live.paused?'paused':'live'}"><span class="dot"></span>${o.live.paused?'Paused · customers don\'t see the offer':'Live · day '+day+' of '+r.D}<span class="sp"></span><button class="btn sm" onclick="togglePause('${o.id}')">${o.live.paused?'Resume':'Pause offer'}</button><button class="btn sm" onclick="endNow('${o.id}')">End and see results</button></div>
+ <div class="g4"><div class="card kpi"><div class="lbl">Redemptions</div><div class="mid num">${done}</div><div class="sub">Plan by today: ${pl}</div></div>
+  <div class="card kpi"><div class="lbl">Your budget used</div><div class="mid num">${K(spent)}</div><div class="meter" style="margin-top:6px"><i style="width:${Math.min(100,spent/o.guard.budget*100)}%;background:var(--accent)"></i></div><div class="sub">of ${R(o.guard.budget)}${o.fund.mode!=='me'?' · '+bs+' paid '+K(done*r.per*(1-myShare(o))):''}</div></div>
+  <div class="card kpi"><div class="lbl">Offer vs holdout</div><div class="mid num" style="color:var(--good)">${o.guard.holdout?'+18%':'n/a'}</div><div class="sub">${o.guard.holdout?'Conversion, early read':'Holdout is off'}</div></div>
+  <div class="card kpi"><div class="lbl">Held for review</div><div class="mid num">4</div><div class="sub">By your card rule</div></div></div>
+ <div class="g2"><div class="card"><h2>Daily redemptions vs plan</h2><div class="legend" style="margin-top:6px"><span style="--c:var(--accent)">Actual</span><span style="--c:var(--chart2)">Plan</span></div>
+  <div class="bars" style="margin-top:12px">${[...Array(shown)].map((_,j)=>{const i=day>shown?day-shown+j:j,a=i<day?act[i]:null;return `<div class="barrow"><span>Day ${i+1}${i===day-1?' · today':''}</span><div style="display:grid;gap:3px"><div class="bt"><i class="g" style="width:${f/mx*100}%"></i></div>${a!==null?`<div class="bt"><i style="width:${a/mx*100}%"></i></div>`:''}</div><span class="num">${a!==null?a+' / '+Math.round(f):'plan '+Math.round(f)}</span></div>`}).join('')}</div></div>
+  <div style="display:grid;gap:12px;align-content:start;min-width:0"><h2>Needs your call</h2>
+  ${N.map(n=>{const st=o.live.nudges[n.id];return `<div class="nudge ${st?'dn':''}"><div class="row"><span class="pill ${n.lvl}">${n.tag}</span>${st?`<span class="pill good">${st}</span>`:''}</div><h3>${n.t}</h3><p>${n.d}</p>${st?'':`<div class="row"><button class="btn pri sm" onclick="nud('${o.id}','${n.id}','Done')">${n.a}</button><button class="btn sm" onclick="${n.id==='hot'?`editExisting('${o.id}')`:`nud('${o.id}','${n.id}','Edited')`}">Change</button><button class="btn sm" onclick="nud('${o.id}','${n.id}','Ignored')">Ignore</button></div>`}</div>`}).join('')}</div></div>`}
+function togglePause(id){const o=S.offers.find(x=>x.id===id);o.live.paused=!o.live.paused;o.status=o.live.paused?'Paused':'Live';save();offer();toast(o.live.paused?'Paused':'Resumed')}
+function nud(id,n,st){const o=S.offers.find(x=>x.id===id);o.live.nudges[n]=st;if(n==='hot'&&st==='Done'){o.p.min=Math.round(o.p.min*1.2/100)*100}if(n==='axis'&&st==='Done'){newFrom('festive','careful');S.draft.issuer='Axis Bank';S.draft.name='Axis cards · small test';save();return}save();offer();toast(st==='Ignored'?'Ignored. The copilot will weigh this less next time.':'Done. Logged in offer history.')}
+function endNow(id){const o=S.offers.find(x=>x.id===id);o.status='Ended';save();offer()}
+
+/* results */
+function result(o){const r=simO(o),act=Math.round(r.inc*1.12),hold=3.9,lift=Math.max(5,Math.round(act/(r.base||1)*100));return {r,act,prof:r.profit*1.1,hold,off:+(hold*(1+lift/100)).toFixed(1),lift}}
+function resultView(o){const x=result(o),r=x.r,s=SEG[o.opp];
+ return `<div class="card" style="background:var(--navy);color:#fff;border:0"><div class="lbl" style="color:#ffffffaa">Real extra profit, measured against the holdout</div><div class="big num">${x.prof>0?'+':''}${K(x.prof)}</div><div style="opacity:.8;font-size:13px">${x.act} orders happened because of the offer. The plan said ${Math.round(r.inc)}.</div></div>
+ <div class="g4"><div class="card kpi"><div class="lbl">Redemptions</div><div class="mid num">${Math.round(r.red)}</div><div class="sub">${Math.round(r.any)} would have bought anyway</div></div>
+  <div class="card kpi"><div class="lbl">Discount, your share</div><div class="mid num">${K(r.cost)}</div><div class="sub">${r.bankCost>0?bankShort(o)+' paid '+K(r.bankCost):'Paid by you'}</div></div>
+  <div class="card kpi"><div class="lbl">Conversion lift</div><div class="mid num" style="color:var(--good)">+${x.lift}%</div><div class="sub">${x.off}% vs ${x.hold}% holdout</div></div>
+  <div class="card kpi"><div class="lbl">Abuse stopped</div><div class="mid num">${K(4*r.per)}</div><div class="sub">4 discounts held</div></div></div>
+ <div class="g2"><div class="card"><h2>Offer group vs holdout</h2><p class="sub">Same customers, same dates. Only difference is the offer.</p>
+  <div class="bars" style="margin-top:12px"><div class="barrow"><span>Saw the offer</span><div class="bt"><i style="width:${x.off/7*100}%"></i></div><b class="num">${x.off}%</b></div><div class="barrow"><span>Holdout</span><div class="bt"><i class="g" style="width:${x.hold/7*100}%"></i></div><b class="num">${x.hold}%</b></div>
+  <div class="barrow"><span>Basket, offer</span><div class="bt"><i style="width:${r.avgQ/4000*100}%"></i></div><b class="num">${K(r.avgQ)}</b></div><div class="barrow"><span>Basket, holdout</span><div class="bt"><i class="g" style="width:${s.aov/4000*100}%"></i></div><b class="num">${K(s.aov)}</b></div></div></div>
+  <div class="card"><h2>What the copilot learned</h2><div class="learn" style="margin-top:12px">
+   <div><span class="pill good">Up</span><span>${o.issuer.split(' ')[0]} buyers respond to a minimum just above their usual basket. Future suggestions start there.</span></div>
+   <div><span class="pill warn">Down</span><span>The first days ran hot on sure buyers. Next plan starts with a higher minimum.</span></div>
+   ${o.req?`<div><span class="pill bank">Bank</span><span>${bankShort(o)} ${o.req.result==='approved'?'co-funded this one. Its approval data strengthens your next request.':'did not fund this one. Next request goes earlier.'}</span></div>`:''}
+   <div><span class="pill">You</span><span>Your accept and ignore choices tune how often the copilot speaks up.</span></div></div>
+   <div class="row" style="margin-top:14px"><button class="btn pri" onclick="repeatO('${o.id}')">Repeat with learnings</button><button class="btn" onclick="toast('Okay. No follow-up planned.')">Stop here</button></div></div></div>`}
+function repeatO(id){const o=S.offers.find(x=>x.id===id);S.draft=Object.assign(clone(o),{id:'o'+(++S.seq),name:o.name.split(' · ')[0]+' again · '+o.name.split(' · ')[1],status:'Draft',req:null,live:{day:0,paused:false,nudges:{}},start:'2026-12-20',log:['Minimum raised 10% based on last results'],plan:null});S.draft.p.min=Math.round(o.p.min*1.1/100)*100;nav('editor')}
+
+if(S.view==='editor'&&!S.draft)S.view='offers';
+render();
+</script>
+
+</body>
+</html>
